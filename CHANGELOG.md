@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-11-23
+
+### Fixed
+
+- Shut down omp's whole process group on POSIX (`SIGTERM`, then `SIGKILL` after
+  2 s), so shell commands started by a task do not outlive the engine.
+  A `SIGKILL` of the entry itself still cannot run cleanup: omp exits when its
+  stdin closes, but may linger while a turn is in flight.
+
 ## [1.0.1] - 2026-11-23
 
 ### Fixed

@@ -61,7 +61,11 @@ const args = PROFILE ? ['--profile', PROFILE, 'acp'] : ['acp'];
 
 let agent;
 try {
-  agent = spawn(ompBin, args, { stdio: ['pipe', 'pipe', 'inherit'] });
+  agent = spawn(ompBin, args, {
+    stdio: ['pipe', 'pipe', 'inherit'],
+    // Own process group so a shutdown reaches omp's tool subprocesses too.
+    detached: process.platform !== 'win32',
+  });
 } catch (error) {
   console.error(`failed to start ${ompBin} ${args.join(' ')}: ${error && error.message}`);
   process.exit(1);
@@ -72,11 +76,7 @@ try {
 agent.stdin.on('error', () => {});
 process.stdin.on('error', () => {});
 process.stdout.on('error', () => {
-  try {
-    agent.kill('SIGTERM');
-  } catch {
-    /* already gone */
-  }
+  signalAgent('SIGTERM');
   process.exit(0);
 });
 
@@ -94,6 +94,24 @@ agent.on('exit', (code, signal) => {
 
 let shuttingDown = false;
 
+// Signal omp's whole process group on POSIX so its shell commands go down too;
+// Windows has no process groups here, so fall back to the process itself.
+function signalAgent(signal) {
+  if (process.platform !== 'win32' && agent.pid) {
+    try {
+      process.kill(-agent.pid, signal);
+      return;
+    } catch {
+      /* group already gone, fall through to the process */
+    }
+  }
+  try {
+    agent.kill(signal);
+  } catch {
+    /* already gone */
+  }
+}
+
 // Cindy ends this process when the task ends or the plugin is disabled.
 // Take the omp process down with us so nothing is left running.
 function shutdown() {
@@ -104,12 +122,11 @@ function shutdown() {
   } catch {
     /* already closed */
   }
-  try {
-    agent.kill('SIGTERM');
-  } catch {
-    /* already gone */
-  }
-  setTimeout(() => process.exit(0), 1000).unref();
+  signalAgent('SIGTERM');
+  setTimeout(() => {
+    signalAgent('SIGKILL');
+    setTimeout(() => process.exit(0), 250);
+  }, 2000);
 }
 
 // Cindy closing our stdin already ends omp's stdin through the pipe; give it a
