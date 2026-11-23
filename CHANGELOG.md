@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/smoke.mjs`: ACP handshake, missing-binary regression and worker probe
+  checks against the local omp (no model calls).
+
 ## [1.1.1] - 2026-11-23
 
 ### Added
