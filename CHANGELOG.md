@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/smoke.mjs` (repository only): ACP handshake, missing-binary
   regression and worker probe checks; no model calls. The run uses a throwaway
   session dir, so it does not write to the user's omp history.
+- `scripts/test-publish.mjs` (repository only): covers the publishing page with
+  fake `cindy`, `fetch` and `BroadcastChannel`, including refresh and failure.
 
 ### Fixed
 
