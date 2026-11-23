@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-11-23
+
+### Changed
+
+- Binary discovery also checks `~/.bun/bin`, `~/.volta/bin`, `~/.npm-global/bin`,
+  `/opt/local/bin` and nvm/fnm version bins, so an npm-installed `omp` is found
+  without a login shell.
+- `OMP_HARNESS_BIN` is resolved to an absolute path; relative values now work.
+- Windows is explicitly unsupported instead of failing to spawn a `.cmd` shim.
+
 ## [1.0.2] - 2026-11-23
 
 ### Fixed
