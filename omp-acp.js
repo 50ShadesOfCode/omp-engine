@@ -67,6 +67,19 @@ try {
   process.exit(1);
 }
 
+// Both pipes fail when the other side goes away: Cindy closes the task, or omp
+// exits before reading. Those are normal shutdowns, not unhandled exceptions.
+agent.stdin.on('error', () => {});
+process.stdin.on('error', () => {});
+process.stdout.on('error', () => {
+  try {
+    agent.kill('SIGTERM');
+  } catch {
+    /* already gone */
+  }
+  process.exit(0);
+});
+
 process.stdin.pipe(agent.stdin);
 agent.stdout.pipe(process.stdout);
 
@@ -76,12 +89,21 @@ agent.on('error', (error) => {
 });
 
 agent.on('exit', (code, signal) => {
-  process.exit(code ?? (signal ? 1 : 0));
+  process.exit(shuttingDown ? 0 : (code ?? (signal ? 1 : 0)));
 });
+
+let shuttingDown = false;
 
 // Cindy ends this process when the task ends or the plugin is disabled.
 // Take the omp process down with us so nothing is left running.
 function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  try {
+    agent.stdin.end();
+  } catch {
+    /* already closed */
+  }
   try {
     agent.kill('SIGTERM');
   } catch {
@@ -90,5 +112,10 @@ function shutdown() {
   setTimeout(() => process.exit(0), 1000).unref();
 }
 
+// Cindy closing our stdin already ends omp's stdin through the pipe; give it a
+// moment to finish on its own, then take it down.
+process.stdin.on('end', () => {
+  setTimeout(shutdown, 2000);
+});
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-23
+
+### Fixed
+
+- Handled closed ACP pipes: an unavailable or already-exited `omp`, and a client
+  that closes the task, no longer crash the entry with an unhandled `EPIPE`.
+  The entry now stops `omp` and exits cleanly.
+
 ## [1.0.0] - 2026-11-23
 
 ### Added
