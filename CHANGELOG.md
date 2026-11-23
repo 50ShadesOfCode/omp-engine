@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The node worker probes `omp acp` in a throwaway `--no-session` session
   (initialize + `session/new` only, no model calls).
 - Settings page shows the probed state and refreshes it on open or on demand.
+- Reports provider quota windows via the host `usage` call (`reportsUsage:
+  true`), read from `omp usage --json`; no data or an error returns `null`.
 - README shipped as the plugin's `readme`.
 - `scripts/smoke.mjs` (repository only): ACP handshake, missing-binary
   regression and worker probe checks; no model calls. The run uses a throwaway

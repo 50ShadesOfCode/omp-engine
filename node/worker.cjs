@@ -8,6 +8,7 @@ const { findOmp } = require('../lib/find-omp.cjs');
 
 const PROBE_TIMEOUT_MS = 12000;
 const CATALOG_TIMEOUT_MS = 8000;
+const USAGE_TIMEOUT_MS = 15000;
 const MAX_MODELS = 200;
 
 function reply(message) {
@@ -62,6 +63,62 @@ function readChatCatalog(bin) {
             }
           }
           resolve(ids.size ? ids : null);
+        } catch {
+          resolve(null);
+        }
+      },
+    );
+  });
+}
+
+// Reads provider quota windows from `omp usage --json`. Any failure, timeout or
+// empty report means "no data", which the host shows as no usage.
+function readUsage(bin) {
+  return new Promise((resolve) => {
+    execFile(
+      bin,
+      ompArgs('usage', '--json'),
+      { timeout: USAGE_TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024 },
+      (error, stdout) => {
+        if (error) {
+          resolve(null);
+          return;
+        }
+        try {
+          const parsed = JSON.parse(stdout);
+          const windows = [];
+          const balances = [];
+          for (const report of parsed.reports || []) {
+            const plan = report.metadata?.planType || report.provider || 'omp';
+            for (const limit of report.limits || []) {
+              const remaining = limit.amount?.remainingFraction;
+              const resetsAt = limit.window?.resetsAt;
+              const label = limit.window?.label || limit.label || limit.id;
+              if (typeof remaining !== 'number' || typeof resetsAt !== 'number' || !label) {
+                continue;
+              }
+              windows.push({
+                label: `${plan} · ${label}`,
+                remainingPercent: Math.max(0, Math.min(100, Math.round(remaining * 100))),
+                resetsAt,
+              });
+            }
+            for (const balance of report.balances || []) {
+              if (balance && typeof balance.currency === 'string' && typeof balance.amount === 'string') {
+                balances.push({ currency: balance.currency, amount: balance.amount });
+              }
+            }
+          }
+          if (!windows.length && !balances.length) {
+            resolve(null);
+            return;
+          }
+          const updatedAt = typeof parsed.generatedAt === 'number' ? parsed.generatedAt : Date.now();
+          resolve({
+            updatedAt,
+            ...(windows.length ? { windows } : {}),
+            ...(balances.length ? { balances } : {}),
+          });
         } catch {
           resolve(null);
         }
@@ -207,6 +264,7 @@ async function inspectHarness() {
 
   return {
     available: true,
+    reportsUsage: true,
     version: clip(probe.version, 64) || undefined,
     ...(modes.length ? { modes, ...(defaultMode ? { defaultMode } : {}) } : {}),
     ...(models.length ? { models } : {}),
@@ -219,6 +277,11 @@ readline.createInterface({ input: process.stdin }).on('line', async function (li
     request = JSON.parse(line);
   } catch {
     reply({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } });
+    return;
+  }
+  if (request.method === 'usage') {
+    const bin = findOmp();
+    reply({ jsonrpc: '2.0', id: request.id, result: bin ? await readUsage(bin) : null });
     return;
   }
   if (request.method === 'harness/inspect') {

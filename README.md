@@ -44,6 +44,9 @@ count) and can refresh it.
   published to Cindy via `PUT /harnesses`, so the model selector can offer omp
   models before the first task. The probe uses a throwaway `--no-session`
   session and never calls a model.
+- Provider quota windows are reported through the host `usage` call
+  (`reportsUsage: true`), read from `omp usage --json`. No data, a timeout or an
+  error returns `null`.
 - Cindy accepts at most 200 models per engine; omp currently reports 218, so the
   list is capped in omp's order. Per-model thinking levels are not published yet.
 - Local tasks only: `remoteWorkspace` / `guestWorkspace` are not declared.
