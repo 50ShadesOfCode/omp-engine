@@ -3,6 +3,8 @@
 // Sends no prompt, so it never calls a model. Requires the omp CLI.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +12,26 @@ import { fileURLToPath } from 'node:url';
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const entry = path.join(root, 'omp-acp.js');
 const worker = path.join(root, 'node', 'worker.cjs');
+
+const require = createRequire(import.meta.url);
+const { findOmp } = require('../lib/find-omp.cjs');
+const realOmp = findOmp();
+if (!realOmp) {
+  throw new Error('omp not found; install the CLI or set OMP_HARNESS_BIN');
+}
+
+// Run the proxy against a wrapper that points omp at a throwaway session dir,
+// so a smoke run never touches the user's omp history.
+const smokeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'omp-engine-smoke-'));
+const sessionDir = path.join(smokeDir, 'sessions');
+fs.mkdirSync(sessionDir);
+const wrapper = path.join(smokeDir, 'omp');
+fs.writeFileSync(
+  wrapper,
+  `#!/bin/sh\nexec "${realOmp}" --no-session --session-dir "${sessionDir}" "$@"\n`,
+);
+fs.chmodSync(wrapper, 0o755);
+process.on('exit', () => fs.rmSync(smokeDir, { recursive: true, force: true }));
 
 const initialize = JSON.stringify({
   jsonrpc: '2.0',
@@ -32,7 +54,10 @@ function waitForExit(child, timeoutMs) {
 }
 
 async function handshake() {
-  const child = spawn(process.execPath, [entry], { stdio: ['pipe', 'pipe', 'pipe'] });
+  const child = spawn(process.execPath, [entry], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    env: { ...process.env, OMP_HARNESS_BIN: wrapper },
+  });
   const messages = [];
   let buffer = '';
   let stderr = '';
@@ -90,6 +115,13 @@ const modeOption = session.result.configOptions.find((option) => option.id === '
 assert.ok(modelOption && modelOption.options.length > 0, 'omp must report models');
 assert.ok(modeOption && modeOption.options.length > 0, 'omp must report modes');
 assert.equal(handshakeResult.exit.code, 0, `proxy must exit 0, stderr: ${handshakeResult.stderr}`);
+const sessionFiles = fs.existsSync(sessionDir)
+  ? fs.readdirSync(sessionDir).filter((name) => name.endsWith('.jsonl'))
+  : [];
+assert.ok(
+  sessionFiles.length > 0,
+  'omp must write its session metadata into the throwaway dir, not the user profile',
+);
 console.log(
   `ok handshake: omp ${initialized.result.agentInfo.version}, ${modelOption.options.length} models, ` +
     `${modeOption.options.map((option) => option.value).join('/')}`,
@@ -110,7 +142,10 @@ assert.ok(!/Unhandled 'error' event/.test(brokenStderr), 'a missing binary must 
 assert.match(brokenStderr, /omp acp failed/, 'the failure must be reported on stderr');
 console.log('ok missing binary: clean failure');
 
-const probe = spawn(process.execPath, [worker], { stdio: ['pipe', 'pipe', 'pipe'] });
+const probe = spawn(process.execPath, [worker], {
+  stdio: ['pipe', 'pipe', 'pipe'],
+  env: { ...process.env, OMP_HARNESS_BIN: wrapper },
+});
 let probeOutput = '';
 probe.stdout.on('data', (chunk) => {
   probeOutput += chunk;

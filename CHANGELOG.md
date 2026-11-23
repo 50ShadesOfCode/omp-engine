@@ -19,7 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Settings page shows the probed state and refreshes it on open or on demand.
 - README shipped as the plugin's `readme`.
 - `scripts/smoke.mjs` (repository only): ACP handshake, missing-binary
-  regression and worker probe checks; no model calls.
+  regression and worker probe checks; no model calls. The run uses a throwaway
+  session dir, so it does not write to the user's omp history.
 
 ### Fixed
 
