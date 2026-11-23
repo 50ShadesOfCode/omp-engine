@@ -6,7 +6,7 @@
   "description": "Runs the local omp CLI as an ACP execution engine, so a Cindy task can run on omp.",
   "whenToUse": "选择任务执行引擎、想用本机 omp 跑任务、或让 Cindy 使用 omp 的模型与工具时找我",
   "version": "1.0.1",
-  "releaseNotes": "Engine status publishing (version, modes, models), clean ACP shutdown, broader binary discovery, docs and a smoke test. See CHANGELOG.",
+  "releaseNotes": "Publishes engine status, chat models and provider usage; clean shutdown; clear availability reasons; docs and tests. See CHANGELOG.",
   "entry": "main.js",
   "readme": { "en": "README.md" },
   "settingsHtml": "settings.html",

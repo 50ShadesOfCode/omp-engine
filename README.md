@@ -56,8 +56,11 @@ count) and can refresh it.
 ## Development
 
 ```sh
-./scripts/pack.sh          # builds omp-engine-<version>.cindy from ghost.json
-node scripts/smoke.mjs     # ACP handshake against the local omp (no model calls)
+./scripts/pack.sh                   # builds omp-engine-<version>.cindy from ghost.json
+node scripts/smoke.mjs              # ACP handshake and worker probe, isolated sessions
+node scripts/test-publish.mjs       # publishing page with fake cindy/fetch/channel
+node scripts/test-shutdown.mjs      # SIGTERM removes the agent and its children
+node scripts/test-availability.mjs  # not-installed / no-acp / probe-failed states
 ```
 
 `CHANGELOG.md` records every release; `ghost.json.version` drives the artifact
