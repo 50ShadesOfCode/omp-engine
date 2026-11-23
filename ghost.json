@@ -1,12 +1,12 @@
 {
   "schemaVersion": 3,
-  "minCindyVersion": "0.1.143",
+  "minCindyVersion": "0.1.144",
   "id": "omp-engine",
   "name": "omp Engine",
   "description": "Runs the local omp CLI as an ACP execution engine, so a Cindy task can run on omp.",
   "whenToUse": "选择任务执行引擎、想用本机 omp 跑任务、或让 Cindy 使用 omp 的模型与工具时找我",
-  "version": "1.0.3",
-  "releaseNotes": "Finds omp in bun/volta/npm-global and nvm/fnm bins; relative OMP_HARNESS_BIN is resolved. Windows is explicitly unsupported.",
+  "version": "1.0.4",
+  "releaseNotes": "Declares Cindy 0.1.144 as the verified minimum for the harness API.",
   "entry": "main.js",
   "node": {
     "entry": "node/worker.cjs",

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-11-23
+
+### Changed
+
+- `minCindyVersion` is now `0.1.144`, the host version the harness API was
+  verified on. (Per the plugin manual, the field records the tested host floor.)
+
 ## [1.0.3] - 2026-11-23
 
 ### Changed
