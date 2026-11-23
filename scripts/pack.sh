@@ -1,20 +1,43 @@
 #!/bin/sh
 # Packs the plugin sources into omp-engine-<version>.cindy.
 #
-# The file list mirrors ghost.json: `entry`, every `node.entries` item and the
-# sources those files require. Keep it in sync when the manifest changes.
+# The file list comes from ghost.json (entry, node entries, settings page and
+# readme files), plus the local modules and page scripts those files require. A manifest change
+# cannot silently leave a file out of the package.
 set -eu
 cd "$(dirname "$0")/.."
 
 version=$(node -p "require('./ghost.json').version")
 out="omp-engine-$version.cindy"
+list=$(mktemp)
+trap 'rm -f "$list"' EXIT
 
-for file in ghost.json README.md main.js settings.html settings.js node/worker.cjs omp-acp.js lib/find-omp.cjs; do
+node -e '
+const manifest = require("./ghost.json");
+const files = new Set(["ghost.json"]);
+const add = (file) => {
+  if (typeof file === "string" && file) files.add(file);
+};
+add(manifest.entry);
+if (manifest.node) {
+  add(manifest.node.entry);
+  for (const entry of manifest.node.entries || []) add(entry);
+}
+add(manifest.settingsHtml);
+for (const readme of Object.values(manifest.readme || {})) add(readme);
+for (const extra of ["lib/find-omp.cjs", "settings.js"]) add(extra);
+for (const file of files) console.log(file);
+' > "$list"
+
+while IFS= read -r file; do
   [ -f "$file" ] || { echo "missing $file" >&2; exit 1; }
-done
+done < "$list"
 
 rm -f omp-engine-*.cindy
-zip -q -X "$out" ghost.json README.md main.js settings.html settings.js node/worker.cjs omp-acp.js lib/find-omp.cjs
+while IFS= read -r file; do
+  zip -q -X "$out" "$file"
+done < "$list"
 unzip -tq "$out" >/dev/null
 
-printf 'packed %s (%s bytes)\n' "$out" "$(wc -c < "$out" | tr -d ' ')"
+printf 'packed %s (%s bytes):\n' "$out" "$(wc -c < "$out" | tr -d ' ')"
+sed 's/^/  /' "$list"

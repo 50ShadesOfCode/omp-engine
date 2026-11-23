@@ -47,6 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - omp discovery moved to `lib/find-omp.cjs`, shared by the ACP entry and the
   node worker.
 - The node worker no longer exposes the unused `echo` method.
+- `scripts/pack.sh` derives the package file list from `ghost.json` (entry, node
+  entries, settings page, readme) instead of a second hand-written list. Page
+  scripts and the shared lookup module stay explicit.
 
 ### Notes
 
