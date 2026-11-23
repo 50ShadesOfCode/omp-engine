@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 3,
+  "minCindyVersion": "0.1.143",
+  "id": "omp-harness",
+  "name": "omp Harness",
+  "description": "Runs the local omp CLI as an ACP execution engine, so a Cindy task can run on omp.",
+  "whenToUse": "选择任务执行引擎、想用本机 omp 跑任务、或让 Cindy 使用 omp 的模型与工具时找我",
+  "version": "1.0.0",
+  "entry": "main.js",
+  "node": {
+    "entry": "node/worker.cjs",
+    "protocol": "json-rpc-stdio",
+    "entries": ["omp-acp.js"],
+    "lifecycle": "on-demand",
+    "idleTimeoutSeconds": 120
+  },
+  "harnesses": [
+    {
+      "id": "omp",
+      "name": "omp",
+      "description": "Run tasks with the omp CLI installed on this computer",
+      "protocol": "acp",
+      "entry": "omp-acp.js",
+      "locales": {
+        "zh-CN": {
+          "name": "omp",
+          "description": "用本机安装的 omp 命令行运行任务"
+        }
+      }
+    }
+  ]
+}
