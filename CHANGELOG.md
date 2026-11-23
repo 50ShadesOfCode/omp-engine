@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-11-23
+
+### Changed
+
+- Removed the unused `echo` method from the bundled Node worker; it now only
+  answers `-32601`, keeping the `node.entry` required by the harness declaration.
+
 ## [1.0.4] - 2026-11-23
 
 ### Changed
