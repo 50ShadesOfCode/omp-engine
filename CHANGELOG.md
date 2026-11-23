@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   session dir, so it does not write to the user's omp history.
 - `scripts/test-publish.mjs` (repository only): covers the publishing page with
   fake `cindy`, `fetch` and `BroadcastChannel`, including refresh and failure.
+- `scripts/test-shutdown.mjs` (repository only): a fake harness with a child
+  process must lose both processes when the entry gets SIGTERM.
 
 ### Fixed
 
