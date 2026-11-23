@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Closed ACP pipes no longer crash the entry with an unhandled `EPIPE`; the
   entry stops omp and exits cleanly.
+- The published model list now keeps only omp's chat models, removes duplicate
+  ids and still caps the list at 200. If the chat catalog is unavailable, the
+  ACP list is used as-is.
 - Shutdown reaches omp's whole process group (`SIGTERM`, then `SIGKILL` after
   2 s), so shell commands started by a task do not outlive the engine.
 - `minCindyVersion` raised to `0.1.144`, the host the harness API was verified
@@ -42,8 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Notes
 
-- Cindy accepts at most 200 models per engine; omp reports 218, so the published
-  list is capped at 200 in omp's own order.
+- Cindy accepts at most 200 models per engine; only omp's chat models are
+  published (84 at the time of writing), so the cap is a guard, not a filter.
 - Per-model thinking levels (`efforts`) are not published yet.
 - A `SIGKILL` of the entry cannot run cleanup: omp exits on stdin EOF but may
   linger while a turn is in flight.

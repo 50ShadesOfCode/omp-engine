@@ -1,12 +1,13 @@
 // Required by ghost.json -> node.entry. Besides staying idle for the host
 // protocol, the worker answers `harness/inspect`: a short ACP probe that reads
-// the local omp version, modes and model list for `PUT /harnesses`.
-const { spawn } = require('node:child_process');
+// the local omp version, modes and chat model list for `PUT /harnesses`.
+const { execFile, spawn } = require('node:child_process');
 const os = require('node:os');
 const readline = require('node:readline');
 const { findOmp } = require('../lib/find-omp.cjs');
 
 const PROBE_TIMEOUT_MS = 12000;
+const CATALOG_TIMEOUT_MS = 8000;
 const MAX_MODELS = 200;
 
 function reply(message) {
@@ -18,6 +19,12 @@ function clip(text, limit) {
   return value.length > limit ? `${value.slice(0, limit - 1)}…` : value;
 }
 
+// Same profile the harness entry uses, so the catalog matches its model ids.
+function ompArgs(...args) {
+  const profile = process.env.OMP_HARNESS_PROFILE;
+  return profile ? ['--profile', profile, ...args] : args;
+}
+
 const MODE_IDS = new Map([
   ['default', 'default'],
   ['plan', 'plan'],
@@ -26,25 +33,50 @@ const MODE_IDS = new Map([
   ['auto', 'auto'],
 ]);
 
+// ACP also offers non-chat catalog kinds (embeddings, search, TTS, STT) as
+// switchable models. Only the chat catalog is usable for a task, so read it and
+// use it to filter the ACP list. A missing or broken catalog falls back to the
+// ACP list itself.
+function readChatCatalog(bin) {
+  return new Promise((resolve) => {
+    execFile(
+      bin,
+      ompArgs('models', '--json', '--kind=chat'),
+      { timeout: CATALOG_TIMEOUT_MS, maxBuffer: 8 * 1024 * 1024 },
+      (error, stdout) => {
+        if (error) {
+          resolve(null);
+          return;
+        }
+        try {
+          const parsed = JSON.parse(stdout);
+          const list = Array.isArray(parsed) ? parsed : parsed.models;
+          if (!Array.isArray(list)) {
+            resolve(null);
+            return;
+          }
+          const ids = new Set();
+          for (const model of list) {
+            if (model && model.kind === 'chat' && typeof model.selector === 'string') {
+              ids.add(model.selector);
+            }
+          }
+          resolve(ids.size ? ids : null);
+        } catch {
+          resolve(null);
+        }
+      },
+    );
+  });
+}
+
 // Starts `omp acp` without a session, asks for the initial config options and
 // stops it. No prompt is sent, so this never calls a model.
-function inspectHarness() {
+function probeConfig(bin) {
   return new Promise((resolve, reject) => {
-    const bin = findOmp();
-    if (!bin) {
-      resolve({
-        available: false,
-        reason: 'not-installed',
-        message: 'Install the omp CLI (macOS/Linux) or set OMP_HARNESS_BIN.',
-      });
-      return;
-    }
-
-    const profile = process.env.OMP_HARNESS_PROFILE;
-    const args = profile
-      ? ['--profile', profile, '--no-session', 'acp']
-      : ['--no-session', 'acp'];
-    const child = spawn(bin, args, { stdio: ['pipe', 'pipe', 'ignore'] });
+    const child = spawn(bin, ompArgs('--no-session', 'acp'), {
+      stdio: ['pipe', 'pipe', 'ignore'],
+    });
 
     let buffer = '';
     let settled = false;
@@ -114,28 +146,9 @@ function inspectHarness() {
             finish(new Error(clip(message.error?.message, 120) || 'session/new failed'));
             continue;
           }
-          const config = message.result.configOptions || [];
-          const modelOption = config.find((entry) => entry.id === 'model');
-          const modeOption = config.find((entry) => entry.id === 'mode');
-          const models = (modelOption?.options || [])
-            .slice(0, MAX_MODELS)
-            .map((option) => ({
-              id: clip(option.value, 256),
-              name: clip(option.name || option.value, 200),
-              ...(option.description ? { description: clip(option.description, 200) } : {}),
-            }))
-            .filter((model) => model.id !== '');
-          const modes = [];
-          for (const option of modeOption?.options || []) {
-            const mapped = MODE_IDS.get(option.value);
-            if (mapped && !modes.includes(mapped)) modes.push(mapped);
-          }
-          const defaultMode = MODE_IDS.get(modeOption?.currentValue);
           finish(null, {
-            available: true,
-            version: clip(version, 64) || undefined,
-            ...(modes.length ? { modes, ...(defaultMode ? { defaultMode } : {}) } : {}),
-            ...(models.length ? { models } : {}),
+            version,
+            configOptions: message.result.configOptions || [],
           });
         }
       }
@@ -148,6 +161,56 @@ function inspectHarness() {
       params: { protocolVersion: 1, clientCapabilities: {} },
     });
   });
+}
+
+async function inspectHarness() {
+  const bin = findOmp();
+  if (!bin) {
+    return {
+      available: false,
+      reason: 'not-installed',
+      message: 'Install the omp CLI (macOS/Linux) or set OMP_HARNESS_BIN.',
+    };
+  }
+
+  const [probe, chatCatalog] = await Promise.all([probeConfig(bin), readChatCatalog(bin)]);
+  const config = probe.configOptions;
+  const modelOption = config.find((entry) => entry.id === 'model');
+  const modeOption = config.find((entry) => entry.id === 'mode');
+
+  let options = modelOption?.options || [];
+  if (chatCatalog) {
+    const chatOnly = options.filter((option) => chatCatalog.has(option.value));
+    if (chatOnly.length) options = chatOnly;
+  }
+
+  const seen = new Set();
+  const models = [];
+  for (const option of options) {
+    const id = clip(option.value, 256);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    models.push({
+      id,
+      name: clip(option.name || option.value, 200),
+      ...(option.description ? { description: clip(option.description, 200) } : {}),
+    });
+    if (models.length === MAX_MODELS) break;
+  }
+
+  const modes = [];
+  for (const option of modeOption?.options || []) {
+    const mapped = MODE_IDS.get(option.value);
+    if (mapped && !modes.includes(mapped)) modes.push(mapped);
+  }
+  const defaultMode = MODE_IDS.get(modeOption?.currentValue);
+
+  return {
+    available: true,
+    version: clip(probe.version, 64) || undefined,
+    ...(modes.length ? { modes, ...(defaultMode ? { defaultMode } : {}) } : {}),
+    ...(models.length ? { models } : {}),
+  };
 }
 
 readline.createInterface({ input: process.stdin }).on('line', async function (line) {
