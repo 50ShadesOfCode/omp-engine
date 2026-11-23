@@ -27,11 +27,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fake `cindy`, `fetch` and `BroadcastChannel`, including refresh and failure.
 - `scripts/test-shutdown.mjs` (repository only): a fake harness with a child
   process must lose both processes when the entry gets SIGTERM.
+- `scripts/test-availability.mjs` (repository only): covers `not-installed`,
+  `no-acp`, `probe-failed`, plus the available/reportsUsage state.
 
 ### Fixed
 
 - Closed ACP pipes no longer crash the entry with an unhandled `EPIPE`; the
   entry stops omp and exits cleanly.
+- An unavailable engine now reports a distinct reason (`not-installed`,
+  `no-acp`, `probe-failed`) with a short hint instead of one generic error.
 - omp discovery now ignores a directory named `omp` and checks nvm/fnm
   versions newest-first, so an old omp cannot shadow a newer one.
 - The published model list now keeps only omp's chat models, removes duplicate

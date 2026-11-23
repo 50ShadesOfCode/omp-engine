@@ -44,6 +44,8 @@ count) and can refresh it.
   published to Cindy via `PUT /harnesses`, so the model selector can offer omp
   models before the first task. The probe uses a throwaway `--no-session`
   session and never calls a model.
+- Unavailable engines are published with a reason: `not-installed`, `no-acp`
+  (the CLI has no `acp` command) or `probe-failed`, with a short hint.
 - Provider quota windows are reported through the host `usage` call
   (`reportsUsage: true`), read from `omp usage --json`. No data, a timeout or an
   error returns `null`.

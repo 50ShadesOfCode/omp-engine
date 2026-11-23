@@ -9,6 +9,7 @@ const { findOmp } = require('../lib/find-omp.cjs');
 const PROBE_TIMEOUT_MS = 12000;
 const CATALOG_TIMEOUT_MS = 8000;
 const USAGE_TIMEOUT_MS = 15000;
+const ACP_CHECK_TIMEOUT_MS = 3000;
 const MAX_MODELS = 200;
 
 function reply(message) {
@@ -38,6 +39,19 @@ const MODE_IDS = new Map([
 // switchable models. Only the chat catalog is usable for a task, so read it and
 // use it to filter the ACP list. A missing or broken catalog falls back to the
 // ACP list itself.
+// Old omp builds have no `acp` command. Only ask on a failed probe, so the
+// happy path pays nothing.
+function hasAcpCommand(bin) {
+  return new Promise((resolve) => {
+    execFile(
+      bin,
+      ompArgs('acp', '--help'),
+      { timeout: ACP_CHECK_TIMEOUT_MS },
+      (error) => resolve(!error),
+    );
+  });
+}
+
 function readChatCatalog(bin) {
   return new Promise((resolve) => {
     execFile(
@@ -289,11 +303,26 @@ readline.createInterface({ input: process.stdin }).on('line', async function (li
     try {
       result = await inspectHarness();
     } catch (error) {
-      result = {
-        available: false,
-        reason: 'probe-failed',
-        message: clip(error && error.message, 200) || 'omp probe failed',
-      };
+      const bin = findOmp();
+      if (error && error.code === 'ENOENT') {
+        result = {
+          available: false,
+          reason: 'not-installed',
+          message: 'Install the omp CLI (macOS/Linux) or set OMP_HARNESS_BIN.',
+        };
+      } else if (bin && !(await hasAcpCommand(bin))) {
+        result = {
+          available: false,
+          reason: 'no-acp',
+          message: 'Update omp: this version has no `acp` command.',
+        };
+      } else {
+        result = {
+          available: false,
+          reason: 'probe-failed',
+          message: clip(error && error.message, 200) || 'omp probe failed',
+        };
+      }
     }
     reply({ jsonrpc: '2.0', id: request.id, result });
     return;
