@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Closed ACP pipes no longer crash the entry with an unhandled `EPIPE`; the
   entry stops omp and exits cleanly.
+- omp discovery now ignores a directory named `omp` and checks nvm/fnm
+  versions newest-first, so an old omp cannot shadow a newer one.
 - The published model list now keeps only omp's chat models, removes duplicate
   ids and still caps the list at 200. If the chat catalog is unavailable, the
   ACP list is used as-is.
