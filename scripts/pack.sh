@@ -9,12 +9,12 @@ cd "$(dirname "$0")/.."
 version=$(node -p "require('./ghost.json').version")
 out="omp-engine-$version.cindy"
 
-for file in ghost.json main.js settings.html settings.js node/worker.cjs omp-acp.js lib/find-omp.cjs; do
+for file in ghost.json README.md main.js settings.html settings.js node/worker.cjs omp-acp.js lib/find-omp.cjs; do
   [ -f "$file" ] || { echo "missing $file" >&2; exit 1; }
 done
 
 rm -f omp-engine-*.cindy
-zip -q -X "$out" ghost.json main.js settings.html settings.js node/worker.cjs omp-acp.js lib/find-omp.cjs
+zip -q -X "$out" ghost.json README.md main.js settings.html settings.js node/worker.cjs omp-acp.js lib/find-omp.cjs
 unzip -tq "$out" >/dev/null
 
 printf 'packed %s (%s bytes)\n' "$out" "$(wc -c < "$out" | tr -d ' ')"
