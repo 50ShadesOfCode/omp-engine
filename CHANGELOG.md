@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-23
+
+### Added
+
+- Publishes the engine's availability, version, work modes (`default`, `plan`)
+  and model list to Cindy via `PUT /harnesses`, so the model selector can offer
+  omp models before the first task runs.
+- The node worker probes `omp acp` in a throwaway `--no-session` session
+  (initialize + `session/new` only, no model calls).
+- Settings page shows the probed state and refreshes it on open or on demand.
+
+### Notes
+
+- Cindy accepts at most 200 models per engine; omp currently reports 218, so the
+  published list is capped at 200 in omp's own order.
+- Per-model thinking levels are not published yet.
+
 ## [1.0.6] - 2026-11-23
 
 ### Changed
