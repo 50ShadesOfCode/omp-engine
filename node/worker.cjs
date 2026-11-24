@@ -5,6 +5,7 @@ const { execFile, spawn } = require('node:child_process');
 const os = require('node:os');
 const readline = require('node:readline');
 const { findOmp } = require('../lib/find-omp.cjs');
+const { isChatModel } = require('../lib/chat-models.cjs');
 
 const PROBE_TIMEOUT_MS = 12000;
 const CATALOG_TIMEOUT_MS = 8000;
@@ -72,9 +73,7 @@ function readChatCatalog(bin) {
           }
           const ids = new Set();
           for (const model of list) {
-            if (model && model.kind === 'chat' && typeof model.selector === 'string') {
-              ids.add(model.selector);
-            }
+            if (isChatModel(model)) ids.add(model.selector);
           }
           resolve(ids.size ? ids : null);
         } catch {

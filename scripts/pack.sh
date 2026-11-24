@@ -25,7 +25,7 @@ if (manifest.node) {
 }
 add(manifest.settingsHtml);
 for (const readme of Object.values(manifest.readme || {})) add(readme);
-for (const extra of ["lib/find-omp.cjs", "settings.js"]) add(extra);
+for (const extra of ["lib/find-omp.cjs", "lib/chat-models.cjs", "settings.js"]) add(extra);
 for (const file of files) console.log(file);
 ' > "$list"
 
