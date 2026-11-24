@@ -24,23 +24,29 @@ async function load() {
   try {
     const response = await fetch('/harnesses');
     if (!response.ok) {
-      render(null);
+      statusEl.textContent = `Cannot read engine state (HTTP ${response.status}).`;
       return;
     }
     const body = await response.json();
     render(body.harnesses && body.harnesses[0]);
-  } catch {
-    render(null);
+  } catch (error) {
+    statusEl.textContent = `Cannot read engine state: ${(error && error.message) || error}`;
   }
 }
 
 async function refresh() {
   button.disabled = true;
   try {
-    await fetch('/wake');
+    const wake = await fetch('/wake');
+    if (!wake.ok) {
+      statusEl.textContent = `Cannot wake the engine (HTTP ${wake.status}).`;
+      return;
+    }
     channel.postMessage({ type: 'harness-refresh' });
     setTimeout(load, 1200);
     setTimeout(load, 5000);
+  } catch (error) {
+    statusEl.textContent = `Refresh failed: ${(error && error.message) || error}`;
   } finally {
     setTimeout(() => {
       button.disabled = false;
