@@ -3,6 +3,7 @@
 // The node worker does the probing; this page only forwards its answer to
 // PUT /harnesses (see FORGE_GUIDE §4.6.4).
 const CHANNEL_NAME = 'omp-engine';
+const HARNESS_ID = 'omp';
 const channel = new BroadcastChannel(CHANNEL_NAME);
 
 let inFlight = null;
@@ -17,7 +18,7 @@ async function publish() {
   const state = response.result;
   const put = await fetch('/harnesses', {
     method: 'PUT',
-    body: JSON.stringify({ harnesses: [state] }),
+    body: JSON.stringify({ harnesses: [{ id: HARNESS_ID, ...state }] }),
   });
   if (!put.ok) {
     console.warn(`omp-engine: publishing the engine state failed (${put.status})`);

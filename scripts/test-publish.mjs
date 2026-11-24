@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Tests the sandbox publishing page without Cindy: fake cindy/fetch/channel.
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -55,6 +56,11 @@ async function waitFor(predicate, label) {
   throw new Error(`timed out: ${label}`);
 }
 
+// The published id must be the one ghost.json declares, or the host rejects the
+// whole list with HTTP 400 and no models reach the selector.
+const declared = JSON.parse(fs.readFileSync(path.join(root, 'ghost.json'), 'utf8')).harnesses[0].id;
+assert.equal(declared, 'omp', 'ghost.json declares the omp engine');
+
 createRequire(import.meta.url)(path.join(root, 'main.js'));
 
 await waitFor(() => puts.length === 1, 'initial publish');
@@ -62,7 +68,7 @@ assert.equal(lastRequest.method, 'harness/inspect');
 assert.equal(lastRequest.timeoutMs, 20000);
 assert.equal(puts[0].url, '/harnesses');
 assert.equal(puts[0].init.method, 'PUT');
-assert.deepEqual(JSON.parse(puts[0].init.body), { harnesses: [state] });
+assert.deepEqual(JSON.parse(puts[0].init.body), { harnesses: [{ id: 'omp', ...state }] });
 assert.equal(messages.length, 1);
 assert.equal(messages[0].channel, 'omp-engine');
 assert.deepEqual(messages[0].message, { type: 'harness-status', state });
