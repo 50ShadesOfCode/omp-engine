@@ -49,8 +49,10 @@ count) and can refresh it.
 - Provider quota windows are reported through the host `usage` call
   (`reportsUsage: true`), read from `omp usage --json`. No data, a timeout or an
   error returns `null`.
-- Cindy accepts at most 200 models per engine; omp currently reports 218, so the
-  list is capped in omp's order. Per-model thinking levels are not published yet.
+- The published list is omp's ACP list intersected with `omp models --json
+  --kind=chat`, deduplicated and capped at Cindy's limit of 200 models.
+  Embedding models are dropped even though omp's catalog files them as chat:
+  they cannot answer a prompt. Per-model thinking levels are not published yet.
 - Local tasks only: `remoteWorkspace` / `guestWorkspace` are not declared.
 
 ## Development

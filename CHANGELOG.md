@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-11-24
+
+### Fixed
+
+- Publishing the engine state no longer fails with HTTP 400. The page now sends
+  the harness id declared in `ghost.json` (`omp`) with the state; without it the
+  host rejected the whole list, so the model selector stayed empty.
+- Embedding models no longer appear in the model selector. omp's catalog reports
+  them as `kind: "chat"`, but they cannot answer a prompt; `lib/chat-models.cjs`
+  drops them (5 entries on omp 19.1.1: 84 published models became 79).
+- The settings page now states why it cannot read the engine state or wake the
+  engine, instead of leaving a possibly stale status line.
+- `scripts/test-publish.mjs` also asserts the published id matches `ghost.json`,
+  so the two cannot drift apart again.
+
 ## [1.0.1] - 2026-11-24
 
 ### Added
